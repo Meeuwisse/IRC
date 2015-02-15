@@ -48,6 +48,8 @@ parse :: String -> Net ()
 parse s
     | ping s = pong s
     | chanMatch `isInfixOf` s = tell format s
+    | " JOIN " `isInfixOf` s = tell joined s 
+    | " QUIT " `isInfixOf` s = tell quit s 
     | otherwise = liftIO $ putStrLn s
     where
         ping = isPrefixOf "PING"
@@ -59,6 +61,16 @@ format s = (tail a) ++ " > " ++ (concat d) where
 	(a: b) = splitOn "!" s
 	(_: c) = splitOn chanMatch (head b)
 	d = [dropInt (length chan + 2) $ head c] ++ (map ((++) chanMatch) $ tail c) -- undo remaining splits
+
+joined :: String -> String
+joined s = (tail a) ++ " joined (" ++ c ++ ")" where
+    (a: b) = splitOn "!" s
+    (c: _) = splitOn " JOIN " (head b)
+
+quit :: String -> String
+quit s = (tail a) ++ " quit (" ++ (head c) ++ ")" where
+    (a: b) = splitOn "!" s
+    (_: c) = splitOn " QUIT :" (head b)
 
 write :: String -> Net ()
 write s = do
