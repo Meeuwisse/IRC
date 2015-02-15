@@ -36,6 +36,7 @@ connect = do
     h <- connectTo server (PortNumber 6667)
     forkIO . forever $ getLine >>= hPrintf h "%s\r\n" . chanSpeak
     hSetBuffering h NoBuffering
+    hSetEncoding h utf8
     return (Bot h)
 
 run :: Net ()
@@ -47,31 +48,38 @@ run = do
 
 parse :: String -> Net ()
 parse s
-    | ping s = pong s
     | chanMatch `isInfixOf` s = tell True $ format s
-    | " JOIN " `isInfixOf` s = tell False $ joined s 
-    | " QUIT " `isInfixOf` s = tell False $ quit s 
+    | " JOIN " `isInfixOf` s = tell False $ joined s
+    | " PART " `isInfixOf` s = tell False $ parted s
+    | " QUIT " `isInfixOf` s = tell False $ quit s
+    | "PING " `isPrefixOf` s = (write . (++) "PO" . drop 2) s
     | otherwise = tell False s
     where
-        ping = isPrefixOf "PING"
-        pong = write . (++) "PO" . drop 2
-        tell True  a = liftIO $ putStrLn a
-        tell False a = liftIO $ setBright False >> putStrLn a >> setBright True
+        tell as str = liftIO $ setBright as >> putStrLn str >> setBright True
 
 setBright :: Bool -> IO ()
 setBright True = setSGR [SetConsoleIntensity NormalIntensity]
 setBright False = setSGR [SetConsoleIntensity FaintIntensity]
 
 format :: String -> String
-format s = (tail a) ++ " > " ++ (concat d) where
-	(a: b) = splitOn "!" s
-	(_: c) = splitOn chanMatch (head b)
-	d = [dropInt (length chan + 2) $ head c] ++ (map ((++) chanMatch) $ tail c) -- undo remaining splits
+format s
+    | "ACTION " `isPrefixOf` d = "> " ++ (tail a) ++ (drop 6 d)
+    | otherwise = (tail a) ++ " > " ++ d
+    where
+	   (a: b) = splitOn "!" s
+	   (_: c) = splitOn chanMatch (head b)
+       -- Trim channel id & undo remaining splits
+	   d = concat $ [dropInt (length chan + 2) $ head c] ++ (map ((++) chanMatch) $ tail c)
 
 joined :: String -> String
 joined s = (tail a) ++ " joined (" ++ c ++ ")" where
     (a: b) = splitOn "!" s
     (c: _) = splitOn " JOIN " (head b)
+
+parted :: String -> String
+parted s = (tail a) ++ " left (" ++ (head c) ++ ")" where
+    (a: b) = splitOn "!" s
+    (_: c) = splitOn " PART :" (head b)
 
 quit :: String -> String
 quit s = (tail a) ++ " quit (" ++ (head c) ++ ")" where
