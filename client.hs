@@ -11,6 +11,7 @@ import Control.Monad.Reader
 import Control.Concurrent
 import Control.Exception
 import Text.Printf
+import System.Console.ANSI
 
 server = "irc.freenode.org"
 chan   = "#tutbot-testing"
@@ -47,14 +48,16 @@ run = do
 parse :: String -> Net ()
 parse s
     | ping s = pong s
-    | chanMatch `isInfixOf` s = tell format s
-    | " JOIN " `isInfixOf` s = tell joined s 
-    | " QUIT " `isInfixOf` s = tell quit s 
-    | otherwise = liftIO $ putStrLn s
+    | chanMatch `isInfixOf` s = tell True $ format s
+    | " JOIN " `isInfixOf` s = tell False $ joined s 
+    | " QUIT " `isInfixOf` s = tell False $ quit s 
+    | otherwise = tell False s
     where
         ping = isPrefixOf "PING"
         pong = write . (++) "PO" . drop 2
-        tell a = liftIO . putStrLn . a
+        tell bright a = if bright then
+            liftIO (setSGR [SetConsoleIntensity NormalIntensity] >> (putStrLn a)) else
+            liftIO (setSGR [SetConsoleIntensity FaintIntensity ] >> (putStrLn a))
 
 format :: String -> String
 format s = (tail a) ++ " > " ++ (concat d) where
