@@ -55,9 +55,12 @@ parse s
     where
         ping = isPrefixOf "PING"
         pong = write . (++) "PO" . drop 2
-        tell bright a = if bright then
-            liftIO (setSGR [SetConsoleIntensity NormalIntensity] >> (putStrLn a)) else
-            liftIO (setSGR [SetConsoleIntensity FaintIntensity ] >> (putStrLn a))
+        tell True  a = liftIO $ putStrLn a
+        tell False a = liftIO $ setBright False >> putStrLn a >> setBright True
+
+setBright :: Bool -> IO ()
+setBright True = setSGR [SetConsoleIntensity NormalIntensity]
+setBright False = setSGR [SetConsoleIntensity FaintIntensity]
 
 format :: String -> String
 format s = (tail a) ++ " > " ++ (concat d) where
