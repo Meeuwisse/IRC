@@ -36,7 +36,7 @@ connect = do
     h <- connectTo server (PortNumber 6667)
     forkIO . forever $ getLine >>= hPrintf h "%s\r\n" . chanSpeak
     hSetBuffering h NoBuffering
-    hSetEncoding h utf8
+    --hSetEncoding h utf8
     return (Bot h)
 
 run :: Net ()
@@ -54,8 +54,8 @@ parse s
     | " QUIT " `isInfixOf` s = tell False $ quit s
     | "PING " `isPrefixOf` s = (write . (++) "PO" . drop 2) s
     | otherwise = tell False s
-    where
-        tell as str = liftIO $ setBright as >> putStrLn str >> setBright True
+    where -- Print colored line, then force terminal back to default
+        tell as str = liftIO $ setBright as >> putStr str >> setBright True >> putStrLn ""
 
 setBright :: Bool -> IO ()
 setBright True = setSGR [SetConsoleIntensity NormalIntensity]
@@ -72,9 +72,7 @@ format s
 	   d = concat $ [dropInt (length chan + 2) $ head c] ++ (map ((++) chanMatch) $ tail c)
 
 reason:: [String] -> String
-reason optional = case optional of
-    (x:_) -> " (" ++ x ++ ")"
-    _ -> ""
+reason optional | (x:_) <- optional = " (" ++ x ++ ")" | otherwise = []
 
 joined :: String -> String
 joined s = (tail a) ++ " joined" ++ (reason c) where
