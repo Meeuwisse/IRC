@@ -71,18 +71,23 @@ format s
        -- Trim channel id & undo remaining splits
 	   d = concat $ [dropInt (length chan + 2) $ head c] ++ (map ((++) chanMatch) $ tail c)
 
+reason:: [String] -> String
+reason optional = case optional of
+    (x:_) -> " (" ++ x ++ ")"
+    _ -> ""
+
 joined :: String -> String
-joined s = (tail a) ++ " joined (" ++ c ++ ")" where
+joined s = (tail a) ++ " joined" ++ (reason c) where
     (a: b) = splitOn "!" s
-    (c: _) = splitOn " JOIN " (head b)
+    c = splitOn " JOIN " (head b)
 
 parted :: String -> String
-parted s = (tail a) ++ " left (" ++ (head c) ++ ")" where
+parted s = (tail a) ++ " left" ++ (reason c) where
     (a: b) = splitOn "!" s
     (_: c) = splitOn " PART :" (head b)
 
 quit :: String -> String
-quit s = (tail a) ++ " quit (" ++ (head c) ++ ")" where
+quit s = (tail a) ++ " quit" ++ (reason c) where
     (a: b) = splitOn "!" s
     (_: c) = splitOn " QUIT :" (head b)
 
