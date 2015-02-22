@@ -50,6 +50,7 @@ parse :: String -> Net ()
 parse s
     | chanMatch `isInfixOf` s = tell True $ format s
     | " JOIN " `isInfixOf` s = tell False $ joined s
+    | " NICK " `isInfixOf` s = tell False $ nicked s
     | " PART " `isInfixOf` s = tell False $ parted s
     | " QUIT " `isInfixOf` s = tell False $ quit s
     | "PING " `isPrefixOf` s = (write . (++) "PO" . drop 2) s
@@ -63,7 +64,7 @@ setBright False = setSGR [SetConsoleIntensity FaintIntensity]
 
 format :: String -> String
 format s
-    | "ACTION " `isPrefixOf` d = "> " ++ (tail a) ++ (drop 6 d)
+    | "\SOHACTION " `isPrefixOf` d = "> " ++ (tail a) ++ (drop 7 d)
     | otherwise = (tail a) ++ " > " ++ d
     where
 	   (a: b) = splitOn "!" s
@@ -78,6 +79,11 @@ joined :: String -> String
 joined s = (tail a) ++ " joined" ++ (reason c) where
     (a: b) = splitOn "!" s
     c = splitOn " JOIN " (head b)
+
+nicked :: String -> String
+nicked s = (tail a) ++ " is now known as " ++ c where
+    (a: b) = splitOn "!" s
+    (_: c) = splitOn " NICK :" (head b)
 
 parted :: String -> String
 parted s = (tail a) ++ " left" ++ (reason c) where
